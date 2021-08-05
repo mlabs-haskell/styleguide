@@ -117,6 +117,9 @@ any project, in the `ghc-options` of the Cabal file. Exceptions are allowed
 when the additional constraints are designed to ensure safety, rather than due 
 to reliance on any method.
 
+In cases where orphan instances are permitted by this document, ``-Worphans``
+MAY be disabled.
+
 If a warning from this list is to be disabled, it MUST be disabled in the
 narrowest possible scope; ideally, this SHOULD be a single module.
 
@@ -1061,6 +1064,40 @@ abstractions built on `Functor` or `Traversable` as opposed to `Foldable`.
 Thus, type classes having laws provides both ease of understanding and
 additional flexibility.
 
+## Orphan instances
+
+Orphan instances SHOULD NOT be defined. Permissible exceptions are for
+type classes and types from (different) third-party dependencies, and for
+instances of ``Arbitrary`` for libraries where a direct dependency on
+``QuickCheck`` is not desirable. ``newtype``s SHOULD be the solution to orphan
+instances where reasonable.
+
+### Justification
+
+Instances of type classes generally reside either in the same module as the type
+class, or as the data type being instanced. While multi-parameter type classes
+complicate this picture slightly, this is a good practice for several reasons:
+it makes it easier to determine whether a type is an instance of a type class or
+not (only two places to check), decreases the chances of ambiguity of
+instances and linker issues due to said (see [this note by Stephen Diehl][stephen-diehl-orphans]), 
+and ensures that imports of the type class's and instantiated type's parent
+modules make the instances available where needed. These are significant
+benefits, and thus, in general, this approach is best: orphan instances (which
+don't follow this practice) are thus discouraged.
+
+However, there are two situations where orphan instances are acceptable.
+Firstly, if you have a type class from a third-party package, and you need to
+provide an instance of a type from another third-party package. While ideally,
+the solution would be to ``newtype`` and define the instance over that, this can
+be awkward, especially if you only need one instance and the type being wrapped
+has a non-trivial API of its own. The second is for providing `Arbitrary`
+instances for testing using `QuickCheck`, but without wanting a direct
+dependency on QuickCheck in the library defining the data types being so tested.
+While exceptions like these are never _strictly_ necessary, in some cases,
+orphans resolve these issues more neatly than the alternative: for this reason,
+we allow these exceptions, leaving it to the better judgment of the developer.
+
+[stephen-diehl-orphans]: http://dev.stephendiehl.com/hask/#orphan-instances
 [pvp]: https://pvp.haskell.org/
 [policeman]: https://hackage.haskell.org/package/policeman
 [haddock-since]: https://haskell-haddock.readthedocs.io/en/latest/markup.html#since
