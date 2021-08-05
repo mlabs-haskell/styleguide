@@ -4,6 +4,12 @@ All notable changes will be documented in this file.
 
 The format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
+# Unreleased
+
+## Added
+
+* Explicit prohibition of `Data.Typeable` and reasons.
+
 # 05-07-2021
 
 ## Removed
