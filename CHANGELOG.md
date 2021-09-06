@@ -8,6 +8,7 @@ The format is based on [Keep A Changelog](https://keepachangelog.com/en/1.0.0).
 
 ## Added
 
+* A summary form of the guide in `TLDR.md`.
 * Explicit prohibition of `Data.Typeable` and reasons.
 * `-Wmissing-deriving-strategies` to the list of mandatory pragmata.
 
