@@ -377,6 +377,14 @@ Any type class not imported from an external dependency MUST have laws. These
 laws MUST be documented in a Haddock comment on the type class definition, and
 all instances MUST follow these laws.
 
+# Libraries and frameworks
+
+## Use `Type.Reflection` instead of `Data.Typeable`
+
+`Data.Typeable` from `base` SHOULD NOT be used; the only exception is for
+interfacing with legacy libraries. Whenever its capabilities are required,
+[`Type.Reflection`][type-reflection] SHOULD be used.
+
 [pvp]: https://pvp.haskell.org/
 [policeman]: https://hackage.haskell.org/package/policeman
 [haddock-since]: https://haskell-haddock.readthedocs.io/en/latest/markup.html#since
@@ -396,3 +404,4 @@ all instances MUST follow these laws.
 [hspec]: http://hackage.haskell.org/package/hspec
 [rdp]: https://hackage.haskell.org/package/record-dot-preprocessor
 [rdp-issue]: https://github.com/ghc-proposals/ghc-proposals/pull/282
+[type-reflection]: https://hackage.haskell.org/package/base-4.15.0.0/docs/Type-Reflection.html
