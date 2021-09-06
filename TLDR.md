@@ -20,6 +20,7 @@ project component, in the `ghc-options` of the Cabal file:
 * ``-Wincomplete-uni-patterns``
 * ``-Wredundant-constraints``
 * ``-Wmissing-export-lists``
+* ``-Wmissing-deriving-strategies``
 * ``-Werror``
 
 Additionally, ``-Wincomplete-record-updates`` SHOULD be enabled for all builds
