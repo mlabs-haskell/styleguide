@@ -97,6 +97,7 @@ project component, in the `ghc-options` of the Cabal file:
 * ``-Wincomplete-uni-patterns``
 * ``-Wredundant-constraints``
 * ``-Wmissing-export-lists``
+* ``-Wmissing-deriving-strategies``
 * ``-Werror``
 
 Additionally, ``-Wincomplete-record-updates`` SHOULD be enabled for all builds
@@ -122,12 +123,16 @@ narrowest possible scope; ideally, this SHOULD be a single module.
 
 ### Justification
 
-These options are suggested by [Alexis King][alexis-king-options] - the
+Most of these options are suggested by [Alexis King][alexis-king-options] - the
 justifications for them can be found at the link. These fit well with our
 motivations, and thus, should be used everywhere. The ``-Werror`` ensures that
 warnings _cannot_ be ignored: this means that problems get fixed sooner. We also
-add ``-Wmissing-export-lists``, as these help indicate clearly what is part of
-the public interface of a module, versus an implementation detail.
+add ``-Wmissing-export-lists`` and ``-Wmissing-deriving-strategies``: the first
+ensures that we clearly indicate what is, and isn't, part of a module's public
+API, and the second ensures that we have clarity about how everything is
+derived. As we mandate both export lists and deriving strategies in this
+document, these warnings ensure compliance, as well as checking it
+automatically.
 
 The two permissible exceptions stem from limitations in the record-dot plugin
 (for ``-Wincomplete-record-updates``) and from the way redundant constraints are
