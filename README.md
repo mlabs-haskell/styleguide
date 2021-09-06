@@ -1066,6 +1066,62 @@ abstractions built on `Functor` or `Traversable` as opposed to `Foldable`.
 Thus, type classes having laws provides both ease of understanding and
 additional flexibility.
 
+# Libraries and frameworks
+
+## Use `Type.Reflection` instead of `Data.Typeable`
+
+`Data.Typeable` from `base` SHOULD NOT be used; the only exception is for
+interfacing with legacy libraries. Whenever its capabilities are required,
+[`Type.Reflection`][type-reflection] SHOULD be used.
+
+### Justification
+
+`Data.Typeable` was the first attempt to bring runtime type information to GHC;
+this mechanism is necessary, as GHC normally performs type erasure. The original
+design of `Data.Typeable.Typeable` required the construction of a `TypeRep`,
+which could be user-specified. This led to issues of correctness, as
+user-specified `TypeRep`s could easily not follow the conventions that GHC
+expected, and also coherency, as there's no guarantee that for any given type,
+its `TypeRep` would be unique. This was later subsumed into the
+`DeriveDataTypeable` extension, which made it impossible to define `Typeable`
+instances except through the mechanisms provided by GHC. 
+
+Additionally, as `Data.Typeable` predated `TypeApplications`, its API requires a
+value of a specific type to direct which `TypeRep` to provide. This suffers from
+similar problems as `Foreign.Storable.sizeOf`, as frequently, there is no
+suitable value to provide. This forced developers to write code like
+
+```haskell
+typeOf (undefined :: a)
+```
+
+This looks strange, and isn't the approach taken by modern APIs. Lastly,
+`Data.Typeable` had to be derived for any type that wanted to use its
+mechanisms, which forced developers to 'pay' for these instances, whether they
+wanted to or not.
+
+`Type.Reflection` has been the go-to API for these purposes since GHC 8.2. It
+improves the situation with `Data.Typeable` by replacing the old mechanism with
+a compiler-generated singleton. Furthermore, deriving `Typeable` is now
+unnecessary, much in the same way as deriving `Coercible` is not necessary: GHC
+handles all of this. Additionally, the API is now based on `TypeApplications`,
+which allows us to write 
+
+```haskell
+typeRep @a
+```
+
+The system is also entirely pay-as-you-go - instead of the responsibility being
+placed on the data types (thus requiring you to pay the cost of the instances
+whether you needed them or not), the responsibility is now on the functions that
+consume them: if you specify a `(Typeable a) =>` constraint, this informs GHC
+that the singleton for `TypeRep a` is needed in this function, but not anywhere
+else. 
+
+Since `Type.Reflection` can do everything `Data.Typeable` can, has a more modern
+API, and also lower cost, there is no reason to use `Data.Typeable` anymore
+except for legacy compatibility reasons.
+
 [pvp]: https://pvp.haskell.org/
 [policeman]: https://hackage.haskell.org/package/policeman
 [haddock-since]: https://haskell-haddock.readthedocs.io/en/latest/markup.html#since
@@ -1085,3 +1141,4 @@ additional flexibility.
 [hspec]: http://hackage.haskell.org/package/hspec
 [rdp]: https://hackage.haskell.org/package/record-dot-preprocessor
 [rdp-issue]: https://github.com/ghc-proposals/ghc-proposals/pull/282
+[type-reflection]: https://hackage.haskell.org/package/base-4.15.0.0/docs/Type-Reflection.html
