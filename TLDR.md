@@ -90,6 +90,10 @@ All modules MUST use one of the following conventions for imports:
 * ``import Foo (Baz, Bar, quux)``
 * ``import qualified Foo as F``
 
+If `ImportQualifiedPost` is enabled, the following form CAN also be used:
+
+* ``import Foo qualified as F``
+
 Data types from qualified-imported modules SHOULD be imported unqualified by
 themselves:
 
