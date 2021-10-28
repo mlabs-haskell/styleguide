@@ -175,8 +175,7 @@ following settings (as per its settings file):
 A copy of a configuration file with these settings is provided in this
 repository.
 
-Each source code line MUST be at most 100 characters wide, and SHOULD
-be at most 80 characters wide.
+Each source code line MUST be at most 80 characters wide.
 
 ### Justification
 
@@ -187,10 +186,9 @@ complies. It also helps with `git diff`s, as it 'spreads around' the differences
 less.
 
 Lines wider than 80 characters become difficult to read, especially when viewed
-on a split screen. Sometimes, we can't avoid longer lines (especially with more
-descriptive identifiers), but a line length of over 100 characters becomes
-difficult to read even without a split screen. We don't _enforce_ a maximum of
-80 characters for this exact reason; some judgment is allowed.
+on a split screen. It is also a long-standing convention, not just in Haskell.
+Lastly, very long lines tend to indicate that we need better naming or
+refactoring.
 
 # Code practices
 

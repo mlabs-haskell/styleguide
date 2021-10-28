@@ -67,8 +67,7 @@ following settings (as per its settings file):
 A copy of a configuration file with these settings is provided in this
 repository.
 
-Each source code line MUST be at most 100 characters wide, and SHOULD
-be at most 80 characters wide.
+Each source code line MUST be at most 80 characters wide.
 
 # Code practices
 
