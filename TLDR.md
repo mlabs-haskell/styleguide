@@ -18,31 +18,18 @@ project component, in the `ghc-options` of the Cabal file:
 * ``-Wall``
 * ``-Wcompat``
 * ``-Wincomplete-uni-patterns``
+* ``-Wincomplete-record-updates``
 * ``-Wredundant-constraints``
 * ``-Wmissing-export-lists``
 * ``-Wmissing-deriving-strategies``
 * ``-Werror``
 
-Additionally, ``-Wincomplete-record-updates`` SHOULD be enabled for all builds
-of any project, in the `ghc-options` of the Cabal file. The only exception is 
-when this warning would be spuriously triggered by ``record-dot-preprocessor``, 
-which occurs for definitions like this:
-
-```haskell
-data Foo = Bar {
-   baz :: Int,
-   quux :: String
-   } | 
-   Quux
-```
-
 Additionally, ``-Wredundant-constraints`` SHOULD be enabled for all builds of
 any project, in the `ghc-options` of the Cabal file. Exceptions are allowed 
 when the additional constraints are designed to ensure safety, rather than due 
-to reliance on any method.
-
-If a warning from this list is to be disabled, it MUST be disabled in the
-narrowest possible scope; ideally, this SHOULD be a single module.
+to reliance on any method. If this warning is to be disabled, it MUST be
+disabled in the narrowest possible scope; ideally, this SHOULD be a single
+module.
 
 ## Linting
 
@@ -81,36 +68,58 @@ TitleCase MUST be used. Acronyms used as part of a naming identifier (such as
 
 ## Modules
 
-All publically facing modules (namely, those which are not listed in
-``other-modules`` in the Cabal file) MUST have explicit export lists.
+### Imports
 
 All modules MUST use one of the following conventions for imports:
 
-* ``import Foo (Baz, Bar, quux)``
-* ``import qualified Foo as F``
+* ``import Foo (Baz (Quux, quux), Bar, frob)``
+* ``import qualified Bar.Foo as Foo``
 
-If `ImportQualifiedPost` is enabled, the following form CAN also be used:
+More specifically, any imported module must _either_ explicitly name every
+identifier it imports, or be imported qualified. If `ImportQualifiedPost` is
+enabled, the following form MAY also be used:
 
-* ``import Foo qualified as F``
+* ``import Bar.Foo qualified as Foo``
 
-Data types from qualified-imported modules SHOULD be imported unqualified by
-themselves:
+Some specific examples cases follow. Type class methods SHOULD be imported
+alongside their class:
 
 ```haskell
+import Control.Applicative (Alternative ((<|>)))
+```
+
+An exception is given when only the method is required:
+
+```haskell
+import Control.Applicative (empty)
+```
+
+Record fields MUST be imported alongside their record:
+
+```haskell
+import Data.Monoid (Endo (appEndo))
+```
+
+Data types from modules imported qualified SHOULD be imported unqualified by
+themselves:
+
+```
 import Data.Vector (Vector)
 import qualified Data.Vector as Vector
 ```
 
-The main exception is if such an import would cause a name clash:
+An exception is given if such an import would cause a name clash:
 
 ```haskell
--- no way to import both of these without clashing the Vector type name
-import qualified Data.Vector as Vector
-import qualified Data.Vector.Storable as VStorable
-```
+-- no way to import both of these without clashing on the Vector type name
+import qualified Data.Vector as Basic
+import qualified Data.Vector.Storable as Storable
 
-The _sole_ exception is a 'hiding import' to replace part of the functionality
-of ``Prelude``:
+-- We now use Basic.Vector to refer to the Vector in Data.Vector, and
+-- Storable.Vector otherwise.
+
+We also permit an exception to use a 'hiding import' to replace part of the
+``Prelude``:
 
 ```haskell
 -- replace the String-based readFile with a Text-based one
@@ -118,7 +127,7 @@ import Prelude hiding (readFile)
 import Data.Text.IO (readFile)
 ```
 
-Data constructors SHOULD be imported individually. For example, given the
+Data constructors MUST be imported individually. For example, given the
 following data type declaration:
 
 ```haskell
@@ -133,21 +142,12 @@ Its corresponding import should be:
 import Quux (Foo, Bar, Baz)
 ```
 
-For type class methods, the type class and its methods MUST be imported
-as so:
-
-```haskell
-import Data.Aeson (FromJSON (fromJSON))
-```
-
-Qualified imports SHOULD use the entire module name (that is, the last component
-of its hierarchical name) as the prefix. For example:
+Qualified imports SHOULD use their entire module name (that is, the last
+component of its hierarchical name) as the prefix. For example:
 
 ```haskell
 import qualified Data.Vector as Vector
 ```
-
-Exceptions are granted when:
 
 * The import would cause a name clash anyway (such as different ``vector``
   modules); or
@@ -157,8 +157,51 @@ Qualified imports of multiple modules MUST NOT be imported under the same name.
 Thus, the following is wrong:
 
 ```haskell
+-- Do not do this!
 import qualified Foo.Bar as Baz
 import qualified Foo.Quux as Baz
+```
+
+### Exports
+
+All modules MUST have explicit export lists; that is, every module must state
+what exactly it exports. Export lists SHOULD be separated using Haddock
+headings:
+
+```haskell
+module Foo.Bar (
+  -- * Types
+  Baz,
+  Quux (Quux),
+  -- * Construction
+  mkBaz,
+  quuxFromBaz,
+  -- etc
+  ) where
+```
+
+An exception is granted when the module provides few exported identifiers, or if
+the module doesn't have a large variety of functionality. In the specific case
+of modules that exist _only_ to provide instances (for compatibility, for
+example), the export list MUST be empty.
+
+Exports of data constructors or fields SHOULD be explicit:
+
+```haskell
+-- This is ideal
+module Foo.Bar (
+  Baz(Baz, quux, frob)
+  ) where
+```
+
+An exception is granted if the number of fields or constructors is large; then,
+wildcard exports MAY be used:
+
+```haskell
+-- This is fine if Baz has a lot of constructors or fields
+module Foo.Bar (
+  Baz(..)
+  ) where
 ```
 
 ## Plutus module import naming conventions
@@ -359,6 +402,13 @@ underlying type representation could change significantly.
 type-level computations. In particular, ``type`` MUST NOT be used to create an
 abstraction boundary. 
 
+Sum types containing record fields MUST NOT be defined. Thus, the following is
+not allowed:
+
+```haskell
+data Foo = Bar | Baz { quux :: Int, frob :: (Int, Int) }
+```
+
 # Design practices
 
 ## Parse, don't validate
@@ -388,23 +438,4 @@ all instances MUST follow these laws.
 interfacing with legacy libraries. Whenever its capabilities are required,
 [`Type.Reflection`][type-reflection] SHOULD be used.
 
-[pvp]: https://pvp.haskell.org/
-[policeman]: https://hackage.haskell.org/package/policeman
-[haddock-since]: https://haskell-haddock.readthedocs.io/en/latest/markup.html#since
-[bird-tracks]: https://haskell-haddock.readthedocs.io/en/latest/markup.html#code-blocks
-[hedgehog-classes]: http://hackage.haskell.org/package/hedgehog-classes
-[hspec-hedgehog]: http://hackage.haskell.org/package/hspec-hedgehog
-[property-based-testing]: https://dl.acm.org/doi/abs/10.1145/1988042.1988046
-[hedgehog]: http://hackage.haskell.org/package/hedgehog
-[deriving-strategies]: https://gitlab.haskell.org/ghc/ghc/-/wikis/commentary/compiler/deriving-strategies
-[functor-parametricity]: https://www.schoolofhaskell.com/user/edwardk/snippets/fmap
-[alexis-king-options]: https://lexi-lambda.github.io/blog/2018/02/10/an-opinionated-guide-to-haskell-in-2018/#warning-flags-for-a-safe-build
-[hlint]: http://hackage.haskell.org/package/hlint
-[fourmolu]: http://hackage.haskell.org/package/fourmolu
-[rfc-2119]: https://tools.ietf.org/html/rfc2119
-[boolean-blindness]: http://dev.stephendiehl.com/hask/#boolean-blindness
-[parse-dont-validate]: https://lexi-lambda.github.io/blog/2019/11/05/parse-don-t-validate/
-[hspec]: http://hackage.haskell.org/package/hspec
-[rdp]: https://hackage.haskell.org/package/record-dot-preprocessor
-[rdp-issue]: https://github.com/ghc-proposals/ghc-proposals/pull/282
-[type-reflection]: https://hackage.haskell.org/package/base-4.15.0.0/docs/Type-Reflection.html
+
