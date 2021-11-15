@@ -199,14 +199,12 @@ well as examples of downcasing (``http-api-data``). One choice for consistency
 
 ### Imports
 
-All modules MUST use one of the following conventions for imports:
+All modules MUST use the following conventions for imports:
 
 * ``import Foo (Baz (Quux, quux), Bar, frob)``
 * ``import qualified Bar.Foo as Foo``
 
-More specifically, any imported module must _either_ explicitly name every
-identifier it imports, or be imported qualified. If `ImportQualifiedPost` is
-enabled, the following form MAY also be used:
+If `ImportQualifiedPost` is enabled, the following form MAY also be used:
 
 * ``import Bar.Foo qualified as Foo``
 
@@ -277,6 +275,8 @@ component of its hierarchical name) as the prefix. For example:
 ```haskell
 import qualified Data.Vector as Vector
 ```
+
+Exceptions are granted when:
 
 * The import would cause a name clash anyway (such as different ``vector``
   modules); or

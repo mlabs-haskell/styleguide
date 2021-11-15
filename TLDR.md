@@ -70,14 +70,12 @@ TitleCase MUST be used. Acronyms used as part of a naming identifier (such as
 
 ### Imports
 
-All modules MUST use one of the following conventions for imports:
+All modules MUST use the following conventions for imports:
 
 * ``import Foo (Baz (Quux, quux), Bar, frob)``
 * ``import qualified Bar.Foo as Foo``
 
-More specifically, any imported module must _either_ explicitly name every
-identifier it imports, or be imported qualified. If `ImportQualifiedPost` is
-enabled, the following form MAY also be used:
+If `ImportQualifiedPost` is enabled, the following form MAY also be used:
 
 * ``import Bar.Foo qualified as Foo``
 
@@ -149,6 +147,8 @@ component of its hierarchical name) as the prefix. For example:
 import qualified Data.Vector as Vector
 ```
 
+Exceptions are granted when:
+
 * The import would cause a name clash anyway (such as different ``vector``
   modules); or
 * We have to import a data type qualified as well.
@@ -161,6 +161,7 @@ Thus, the following is wrong:
 import qualified Foo.Bar as Baz
 import qualified Foo.Quux as Baz
 ```
+
 
 ### Exports
 
