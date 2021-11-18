@@ -95,31 +95,18 @@ project component, in the `ghc-options` of the Cabal file:
 * ``-Wall``
 * ``-Wcompat``
 * ``-Wincomplete-uni-patterns``
+* ``-Wincomplete-record-updates``
 * ``-Wredundant-constraints``
 * ``-Wmissing-export-lists``
 * ``-Wmissing-deriving-strategies``
 * ``-Werror``
 
-Additionally, ``-Wincomplete-record-updates`` SHOULD be enabled for all builds
-of any project, in the `ghc-options` of the Cabal file. The only exception is 
-when this warning would be spuriously triggered by ``record-dot-preprocessor``, 
-which occurs for definitions like this:
-
-```haskell
-data Foo = Bar {
-   baz :: Int,
-   quux :: String
-   } | 
-   Quux
-```
-
 Additionally, ``-Wredundant-constraints`` SHOULD be enabled for all builds of
 any project, in the `ghc-options` of the Cabal file. Exceptions are allowed 
 when the additional constraints are designed to ensure safety, rather than due 
-to reliance on any method.
-
-If a warning from this list is to be disabled, it MUST be disabled in the
-narrowest possible scope; ideally, this SHOULD be a single module.
+to reliance on any method. If this warning is to be disabled, it MUST be
+disabled in the narrowest possible scope; ideally, this SHOULD be a single
+module.
 
 ### Justification
 
@@ -134,15 +121,13 @@ derived. As we mandate both export lists and deriving strategies in this
 document, these warnings ensure compliance, as well as checking it
 automatically.
 
-The two permissible exceptions stem from limitations in the record-dot plugin
-(for ``-Wincomplete-record-updates``) and from the way redundant constraints are
-detected; basically, unless a type class method from a constraint is used within
-the body of the definition, or is required by anything called in a transitive
-manner, the constraint is deemed redundant. Mostly, this is accurate, but some
-type-level safety constraints can be deemed redundant as a result of this
-approach. In this case, a limited lowering (per module ideally) of those two
-warnings is acceptable, as they represent workarounds to technical problems,
-rather than issues with the warnings themselves.
+The permissible exception stems from how redundant constraints are detected by
+GHC; basically, unless a type class method from a constraint is used within the
+body of a definition, that constraint is deemed redundant. This is mostly
+accurate, but some type-level safety constraints can be deemed redundant as a
+result of this approach. In this case, a limited disabling (per module, ideally)
+of ``-Wredundant-constraints`` is acceptable, as it represents a workaround to
+a technical problem, not an issue with the warning itself.
 
 ## Linting
 
@@ -212,36 +197,56 @@ well as examples of downcasing (``http-api-data``). One choice for consistency
 
 ## Modules
 
-All publically facing modules (namely, those which are not listed in
-``other-modules`` in the Cabal file) MUST have explicit export lists.
+### Imports
 
-All modules MUST use one of the following conventions for imports:
+All modules MUST use the following conventions for imports:
 
-* ``import Foo (Baz, Bar, quux)``
-* ``import qualified Foo as F``
+* ``import Foo (Baz (Quux, quux), Bar, frob)``
+* ``import qualified Bar.Foo as Foo``
 
-If `ImportQualifiedPost` is enabled, the following form CAN also be used:
+If `ImportQualifiedPost` is enabled, the following form MAY also be used:
 
-* ``import Foo qualified as F``
+* ``import Bar.Foo qualified as Foo``
 
-Data types from qualified-imported modules SHOULD be imported unqualified by
-themselves:
+Some specific examples cases follow. Type class methods SHOULD be imported
+alongside their class:
 
 ```haskell
+import Control.Applicative (Alternative ((<|>)))
+```
+
+An exception is given when only the method is required:
+
+```haskell
+import Control.Applicative (empty)
+```
+
+Record fields MUST be imported alongside their record:
+
+```haskell
+import Data.Monoid (Endo (appEndo))
+```
+
+Data types from modules imported qualified SHOULD be imported unqualified by
+themselves:
+
+```
 import Data.Vector (Vector)
 import qualified Data.Vector as Vector
 ```
 
-The main exception is if such an import would cause a name clash:
+An exception is given if such an import would cause a name clash:
 
 ```haskell
--- no way to import both of these without clashing the Vector type name
-import qualified Data.Vector as Vector
-import qualified Data.Vector.Storable as VStorable
-```
+-- no way to import both of these without clashing on the Vector type name
+import qualified Data.Vector as Basic
+import qualified Data.Vector.Storable as Storable
 
-The _sole_ exception is a 'hiding import' to replace part of the functionality
-of ``Prelude``:
+-- We now use Basic.Vector to refer to the Vector in Data.Vector, and
+-- Storable.Vector otherwise.
+
+We also permit an exception to use a 'hiding import' to replace part of the
+``Prelude``:
 
 ```haskell
 -- replace the String-based readFile with a Text-based one
@@ -249,7 +254,7 @@ import Prelude hiding (readFile)
 import Data.Text.IO (readFile)
 ```
 
-Data constructors SHOULD be imported individually. For example, given the
+Data constructors MUST be imported individually. For example, given the
 following data type declaration:
 
 ```haskell
@@ -264,15 +269,8 @@ Its corresponding import should be:
 import Quux (Foo, Bar, Baz)
 ```
 
-For type class methods, the type class and its methods MUST be imported
-as so:
-
-```haskell
-import Data.Aeson (FromJSON (fromJSON))
-```
-
-Qualified imports SHOULD use the entire module name (that is, the last component
-of its hierarchical name) as the prefix. For example:
+Qualified imports SHOULD use their entire module name (that is, the last
+component of its hierarchical name) as the prefix. For example:
 
 ```haskell
 import qualified Data.Vector as Vector
@@ -288,19 +286,12 @@ Qualified imports of multiple modules MUST NOT be imported under the same name.
 Thus, the following is wrong:
 
 ```haskell
+-- Do not do this!
 import qualified Foo.Bar as Baz
 import qualified Foo.Quux as Baz
 ```
 
 ### Justification
-
-Explicit export lists are an immediate, clear and obvious indication of what
-publically visible interface a module provides. It gives us stability guarantees
-(namely, we know we can change things that aren't exported and not break
-downstream code at compile time), and tells us where to go looking first when
-inspecting or learning the module. Additionally, it means there is less chance
-that implementation details 'leak' out of the module due to errors on the part
-of developers, especially new developers.
 
 One of the biggest challenges for modules which depend on other modules
 (especially ones that come from the project, rather than an external library) is
@@ -318,6 +309,66 @@ name clashes from function names are far more likely than name clashes from type
 names: consider the number of types on which a ``size`` function makes sense.
 Thus, importing type names unqualified, even if the rest of the module is
 qualified, is good practice, and saves on a lot of prefixing.
+
+### Exports
+
+All modules MUST have explicit export lists; that is, every module must state
+what exactly it exports. Export lists SHOULD be separated using Haddock
+headings:
+
+```haskell
+module Foo.Bar (
+  -- * Types
+  Baz,
+  Quux (Quux),
+  -- * Construction
+  mkBaz,
+  quuxFromBaz,
+  -- etc
+  ) where
+```
+
+An exception is granted when the module provides few exported identifiers, or if
+the module doesn't have a large variety of functionality. In the specific case
+of modules that exist _only_ to provide instances (for compatibility, for
+example), the export list MUST be empty.
+
+Exports of data constructors or fields SHOULD be explicit:
+
+```haskell
+-- This is ideal
+module Foo.Bar (
+  Baz(Baz, quux, frob)
+  ) where
+```
+
+An exception is granted if the number of fields or constructors is large; then,
+wildcard exports MAY be used:
+
+```haskell
+-- This is fine if Baz has a lot of constructors or fields
+module Foo.Bar (
+  Baz(..)
+  ) where
+```
+
+### Justification
+
+Explicit export lists are an immediate, clear and obvious indication of what
+publically visible interface a module provides. It gives us stability guarantees
+(namely, we know we can change things that aren't exported and not break
+downstream code at compile time), and tells us where to go looking first when
+inspecting or learning the module. Additionally, it means there is less chance
+that implementation details 'leak' out of the module due to errors on the part
+of developers, especially new developers.
+
+Allowing wildcard exports, while disallowing wildcard _imports_, is justified on
+the grounds of information locality. Seeing a wildcard import of all of a type's
+data constructors or fields doesn't necessarily indicate the usages of said data
+constructors or fields without looking up the module from where they're
+exported; having this import be explicit reduces how much searching we have to
+do. However, if we are reading an export list, we have the type definition in
+the same file we're already looking at, making it fairly easy to check.
 
 ## Plutus module import naming conventions
 
@@ -459,7 +510,7 @@ derivation (the former given by [parametricity
 guarantees][functor-parametricity], the latter by the fact that a newtype only
 wraps a single value). As there is no chance of unexpected behaviour by these,
 no possible behaviour variation, and that they're key to supporting both the
-``stock`` and ``newtype`` deriving stratgies, having these on by default removes
+``stock`` and ``newtype`` deriving strategies, having these on by default removes
 considerable tedium and line noise from our code. A good example are newtype
 wrappers around monadic stacks:
 
@@ -516,7 +567,7 @@ default.
 
 ``InstanceSigs`` are harmless by default, and introduce no complications. Their
 not being default is strange. ``ImportQualifiedPost`` is already a convention 
-of this project, and helps with formatting of imports. 
+of several MLabs projects, and helps with formatting of imports. 
 
 ``KindSignatures`` become extremely useful in any setting where 'exotic kinds'
 (meaning, anything which isn't `Type` or `Type -> Type` or similar) are
@@ -587,10 +638,9 @@ introduce ambiguity into type checking, it only applies when we want to define
 our own multi-parameter type classes, which is rarely necessary. Enabling it
 globally is thus safe and convenient.
 
-Based on the recommendations of this document (driven by the needs of the
-project and the fact it's cardinally connected with Plutus),
-``NoImplicitPrelude`` is required to allow us to default to the Plutus prelude
-instead of the one from ``base``.
+Based on the recommendations of this document (driven by the needs of being 
+cardinally connected with Plutus), ``NoImplicitPrelude`` is required to allow us 
+to default to the Plutus prelude instead of the one from ``base``.
 
 ``OverloadedStrings`` deals with the problem that ``String`` is a suboptimal
 choice of string representation for basically _any_ problem, with the general
@@ -598,6 +648,8 @@ recommendation being to use ``Text`` instead. It is not, however, without its
 problems: 
 
 * ``ByteString``s are treated as ASCII strings by their ``IsString`` instance;
+* The semantics of Plutus' ``BuiltinByteString`` vary considerably by use site,
+  with little indication;
 * Overly polymorphic behaviour of many functions (especially in the presence of
   type classes) forces extra type signatures;
 
@@ -605,8 +657,8 @@ These are usually caused not by the extension itself, but by other libraries and
 their implementations of either ``IsString`` or overly polymorphic use of type
 classes without appropriate laws (Aeson's ``KeyValue`` is a particularly
 egregious offender here). The convenience of this extension in the presence of
-literals, and the fact that our use cases mostly covers ``Text``, makes it worth
-using by default.
+literals, and the fact that for ``BuiltinByteString`` there _is_ no other way to
+construct literals, makes it worth using by default.
 
 ``StandaloneDeriving`` is mostly needed for GADTs, or situations where complex
 type-level computations drive type class instances, requiring users to specify
@@ -646,7 +698,7 @@ laws specifying its behaviour, outside of consistency laws (such as between
 accept its usefulness (a debatable position in itself), there are large numbers
 of possible implementations that could be deemed 'valid'. The approach taken by
 ``DeriveFoldable`` is _one_ such approach, but this requires knowing its
-derivation algorithm, and may well not be something you need. Unlike a
+derivation algorithm, and may well not be the implementation you need. Unlike a
 ``Functor`` derivation (whose meaning is obvious), a ``Foldable`` one is
 anything but, and requires referencing a lot of non-local information to
 determine how it will behave (especially for the 'richer' ``Foldable``, with
@@ -713,13 +765,13 @@ preludes MUST NOT be used.
 
 ### Justification
 
-As this is primarily a Plutus project, we are in some ways limited by what
+For Plutus, we are in some ways limited by what
 Plutus requires (and provides). Especially for on-chain code, the Plutus prelude
 is the one we need to use, and therefore, its use should be as friction-free as
 possible. As many modules may contain a mix of off-chain and on-chain code, we
 also want to make impendance mismatches as limited as possible.
 
-By the very nature of this project, we can assume a familiarity (or at least,
+We can assume a familiarity (or at least,
 the goal of such) with Plutus stuff. Additionally, _every_ Haskell developer is
 familiar with the ``Prelude`` from ``base``. Thus, any replacements of the
 Plutus prelude functionality with the ``base`` prelude should be clearly
@@ -938,6 +990,13 @@ underlying type representation could change significantly.
 type-level computations. In particular, ``type`` MUST NOT be used to create an
 abstraction boundary. 
 
+Sum types containing record fields MUST NOT be defined. Thus, the following is
+not allowed:
+
+```haskell
+data Foo = Bar | Baz { quux :: Int, frob :: (Int, Int) }
+```
+
 ### Justification
 
 Haskell lists are a large example of the legacy of the language: they (in the
@@ -990,6 +1049,13 @@ rename, since it's equivalent semantically. The only reasonable use of ``type``
 is to hide complex type-level computations, which would otherwise be too long.
 Even this is somewhat questionable, but the questionability comes from the
 type-level computation being hidden, not ``type`` as such.
+
+The combination of record syntax and sum types, while allowed, [causes
+considerable issues][record-sum-bad]. One of the biggest problems with this
+combination is that is sneaks in partiality 'via the back door'; at the same
+time, it also produces confusing warnings with `-Wno-incomplete-record-updates`
+and `record-dot-preprocessor`. While arguably convenient in some cases, this
+ultimately creates more problems than it solves.
 
 # Design practices
 
@@ -1144,3 +1210,4 @@ except for legacy compatibility reasons.
 [rdp]: https://hackage.haskell.org/package/record-dot-preprocessor
 [rdp-issue]: https://github.com/ghc-proposals/ghc-proposals/pull/282
 [type-reflection]: https://hackage.haskell.org/package/base-4.15.0.0/docs/Type-Reflection.html
+[record-sum-bad]: https://stackoverflow.com/a/37657296/2629787
