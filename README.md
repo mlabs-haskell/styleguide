@@ -828,6 +828,10 @@ signature changed.
 
 For type classes, their laws MUST be documented using a Haddock comment.
 
+Each repository must also have a README which should explain how to build the application
+and/or library. If the repository contains one or more executable, the readme should also 
+explain how to run each executable, including command line arguments/options.
+
 ### Justification
 
 Code reading is a difficult task, especially when the 'why' rather than the
