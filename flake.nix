@@ -12,5 +12,8 @@
 
       # `nix run .#format` formats in current directory!
       apps.format = self.lib.${system}.mkFormatApp self;
+
+      # `nix fmt` formats in current directory
+      formatter = self.lib.${system}.mkFormatter self;
     }));
 }

@@ -117,16 +117,17 @@ rec {
         touch $out
       '';
 
-  mkFormatApp = src:
-    let
-      script = pkgs.writeScript "format" ''
-        set -euo pipefail
+  mkFormatter = src:
+    pkgs.writeScriptBin "format" ''
+      set -euo pipefail
 
-        ROOT=./$(${getExe pkgs.git} rev-parse --show-cdup)
-        ${getExe pkgs.treefmt} --config-file ${mkTreefmtToml src} --tree-root $ROOT "$@"
-      ''; in
+      ROOT=./$(${getExe pkgs.git} rev-parse --show-cdup)
+      ${getExe pkgs.treefmt} --config-file ${mkTreefmtToml src} --tree-root $ROOT "$@"
+    '';
+
+  mkFormatApp = src:
     {
       type = "app";
-      program = "${script}";
+      program = "${mkFormatter src}/bin/format";
     };
 }
