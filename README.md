@@ -1,3 +1,21 @@
+# Use it!
+
+In your flake, add
+
+```nix
+{ 
+  inputs.styleguide.url = "github:mlabs-haskell/style-guide";
+
+  outputs = inputs @ {...}: inputs.flake-utils.lib.eachDefaultSystem (system: {
+    # ... or your preferred way to handle ${system}
+    checks.format = inputs.styleguide.lib.${system}.mkCheck self;
+    formatter = inputs.styleguide.lib.${system}.mkFormatter self;
+  });
+}
+```
+
+Run `nix fmt` to format your code. Build `checks.${system}.format` in CI to check formatting.
+
 # Introduction
 
 This document describes a set of standards for code. It also explains our reasoning 
