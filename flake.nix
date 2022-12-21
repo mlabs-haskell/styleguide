@@ -4,6 +4,7 @@
     flake-utils.url = "github:numtide/flake-utils";
   };
   outputs = { self, nixpkgs, flake-utils, ... }@inputs: (
+    { herculesCI.ciSystems = [ "x86_64-linux" ]; } //
     flake-utils.lib.eachDefaultSystem (system: {
       lib = import ./lib.nix system inputs;
 
@@ -15,5 +16,6 @@
 
       # `nix fmt` formats in current directory
       formatter = self.lib.${system}.mkFormatter self;
-    }));
+    })
+  );
 }
