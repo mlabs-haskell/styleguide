@@ -3,9 +3,11 @@ system:
 { self, nixpkgs, ... } @ inputs:
 
 let
-  pkgs = nixpkgs.legacyPackages.${system};
-  lib = pkgs.lib;
-
+  pkgs = import nixpkgs {
+    inherit system;
+    config.allowUnfreePredicate = x: nixpkgs.lib.getName x == "terraform";
+  };
+  inherit (pkgs) lib;
   inherit (lib) getExe escapeShellArg;
 in
 
