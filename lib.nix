@@ -48,10 +48,11 @@ rec {
           command = getExe pkgs.bash;
           options =
             # Fourmolu not having an option to specify the config is so dumb...
-            let fourmoluConfig = pkgs.runCommandLocal "fourmoluConfigHome" { } ''
-              mkdir $out
-              cp ${./fourmolu.yaml} $out/
-            '';
+            let
+              fourmoluConfig = pkgs.runCommandLocal "fourmoluConfigHome" { } ''
+                mkdir $out
+                cp ${./fourmolu.yaml} $out/
+              '';
             in
             [
               "-euc"
