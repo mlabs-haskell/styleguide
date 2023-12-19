@@ -3,9 +3,11 @@ system:
 { self, nixpkgs, ... } @ inputs:
 
 let
-  pkgs = nixpkgs.legacyPackages.${system};
-  lib = pkgs.lib;
-
+  pkgs = import nixpkgs {
+    inherit system;
+    config.allowUnfreePredicate = x: nixpkgs.lib.getName x == "terraform";
+  };
+  inherit (pkgs) lib;
   inherit (lib) getExe escapeShellArg;
 in
 
@@ -46,10 +48,11 @@ rec {
           command = getExe pkgs.bash;
           options =
             # Fourmolu not having an option to specify the config is so dumb...
-            let fourmoluConfig = pkgs.runCommandLocal "fourmoluConfigHome" { } ''
-              mkdir $out
-              cp ${./fourmolu.yaml} $out/
-            '';
+            let
+              fourmoluConfig = pkgs.runCommandLocal "fourmoluConfigHome" { } ''
+                mkdir $out
+                cp ${./fourmolu.yaml} $out/
+              '';
             in
             [
               "-euc"
