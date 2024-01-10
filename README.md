@@ -4,7 +4,7 @@ In your flake, add
 
 ```nix
 { 
-  inputs.styleguide.url = "github:mlabs-haskell/style-guide";
+  inputs.styleguide.url = "github:mlabs-haskell/styleguide";
 
   outputs = inputs @ {...}: inputs.flake-utils.lib.eachDefaultSystem (system: {
     # ... or your preferred way to handle ${system}
