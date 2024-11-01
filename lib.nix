@@ -121,7 +121,7 @@ rec {
       '';
 
   mkFormatter = src:
-    pkgs.writeScriptBin "format" ''
+    pkgs.writeShellScriptBin "format" ''
       set -euo pipefail
 
       ROOT=./$(${getExe pkgs.git} rev-parse --show-cdup)
